@@ -1,5 +1,5 @@
 // OAuth callback page — the gateway redirects here with #access_token=...
-// Consume the fragment, persist the token, then redirect to /chat.
+// Consume the fragment, persist the token, then redirect to the app root.
 
 import { useEffect } from 'react';
 import { consumeOAuthFragment } from '../auth';
@@ -7,7 +7,8 @@ import { consumeOAuthFragment } from '../auth';
 export function AuthCallbackPage() {
   useEffect(() => {
     consumeOAuthFragment();
-    window.location.replace('/');
+    const base = import.meta.env.BASE_URL || '/';
+    window.location.replace(base);
   }, []);
 
   return (

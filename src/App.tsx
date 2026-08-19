@@ -8,6 +8,8 @@ import { LoginPage } from './pages/LoginPage';
 import { ChatPage } from './pages/ChatPage';
 import { AuthCallbackPage } from './pages/AuthCallbackPage';
 
+const CALLBACK_PATH = `${import.meta.env.BASE_URL || '/'}auth/callback`.replace(/\/+/g, '/');
+
 export function App() {
   const { isAuthenticated, isLoading } = useAuth();
   const [path, setPath] = useState(window.location.pathname);
@@ -18,7 +20,7 @@ export function App() {
     return () => window.removeEventListener('popstate', onPop);
   }, []);
 
-  if (path === '/auth/callback') {
+  if (path === CALLBACK_PATH) {
     return <AuthCallbackPage />;
   }
 

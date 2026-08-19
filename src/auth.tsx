@@ -79,6 +79,12 @@ function gatewayBase(): string {
   return import.meta.env.VITE_GATEWAY_URL ?? '';
 }
 
+// The base path the SPA is mounted under (e.g. '/rcrt-chat-app/' on the
+// platform, '/' in local dev). Vite sets this from the `base` config.
+export function appBase(): string {
+  return import.meta.env.BASE_URL || '/';
+}
+
 function authHeader(): string | null {
   const token = localStorage.getItem(TOKEN_KEY);
   if (isExpired(token)) return null;
@@ -197,7 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // back to /auth/callback with #access_token=... in the fragment.
     const origin = window.location.origin;
     const base = gatewayBase() || origin;
-    const returnTo = `${origin}/auth/callback`;
+    const returnTo = `${origin}${appBase()}auth/callback`;
     const url = `${base}/v1/auth/oauth/${encodeURIComponent(provider)}/start?return_to=${encodeURIComponent(returnTo)}`;
     window.location.href = url;
   }, []);
