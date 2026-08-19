@@ -79,14 +79,21 @@ export function openChatStream(
 
   const es = new EventSource(url.toString());
 
-  es.onmessage = (e) => {
-    onEvent({ type: 'message', data: e.data });
-  };
-  es.addEventListener('agent.message', (e) => {
-    onEvent({ type: 'agent.message', data: (e as MessageEvent).data });
+  // The platform sends named SSE events: connected, message, delta,
+  // stream.complete, breadcrumb, heartbeat. EventSource dispatches named
+  // events to addEventListener listeners; onmessage only catches events
+  // WITHOUT an explicit event: field (unnamed). So we listen for each by name.
+  es.addEventListener('delta', (e) => {
+    onEvent({ type: 'delta', data: (e as MessageEvent).data });
   });
-  es.addEventListener('agent.delta', (e) => {
-    onEvent({ type: 'agent.delta', data: (e as MessageEvent).data });
+  es.addEventListener('message', (e) => {
+    onEvent({ type: 'message', data: (e as MessageEvent).data });
+  });
+  es.addEventListener('stream.complete', (e) => {
+    onEvent({ type: 'stream.complete', data: (e as MessageEvent).data });
+  });
+  es.addEventListener('connected', (e) => {
+    onEvent({ type: 'connected', data: (e as MessageEvent).data });
   });
   es.onerror = (err) => {
     if (onError) onError(err);

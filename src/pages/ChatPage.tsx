@@ -47,16 +47,22 @@ export function ChatPage() {
       token,
       activeTenant.id,
       (event) => {
-        let payload: { delta?: string; message?: string; content?: string; text?: string };
+        let payload: {
+          delta?: string;
+          is_final?: boolean;
+          content?: { content?: string; source_type?: string; finish_reason?: string };
+          agent_id?: string;
+        };
         try {
           payload = JSON.parse(event.data);
         } catch {
-          payload = { message: event.data };
+          return;
         }
 
-        const text = payload.delta ?? payload.message ?? payload.content ?? payload.text ?? '';
-
-        if (event.type === 'agent.delta' && text) {
+        // 'delta' events carry incremental assistant text.
+        // The platform sends: {"agent_id":"chat","delta":"text...","is_final":true|false}
+        if (event.type === 'delta' && payload.delta) {
+          const text = payload.delta;
           setMessages((prev) => {
             const next = [...prev];
             const last = next[next.length - 1];
@@ -66,18 +72,41 @@ export function ChatPage() {
             }
             return [...next, { role: 'assistant', content: text, pending: true }];
           });
-        } else if (event.type === 'agent.message' && text) {
+        }
+
+        // 'message' events with source_type "agent" carry the final response.
+        // The platform sends: {"content":{"content":"full text","source_type":"agent",...},...}
+        if (event.type === 'message' && payload.content?.source_type === 'agent') {
+          const text = payload.content.content ?? '';
+          if (text) {
+            setMessages((prev) => {
+              const next = [...prev];
+              const last = next[next.length - 1];
+              if (last && last.role === 'assistant' && last.pending) {
+                last.content = text;
+                last.pending = false;
+                return [...next];
+              }
+              return [...next, { role: 'assistant', content: text, pending: false }];
+            });
+          }
+          setStreaming(false);
+        }
+
+        // 'stream.complete' signals the turn is done.
+        if (event.type === 'stream.complete') {
+          setStreaming(false);
+          // If we have a pending assistant message (deltas but no final message),
+          // mark it as complete.
           setMessages((prev) => {
             const next = [...prev];
             const last = next[next.length - 1];
             if (last && last.role === 'assistant' && last.pending) {
-              last.content = text;
               last.pending = false;
               return [...next];
             }
-            return [...next, { role: 'assistant', content: text, pending: false }];
+            return next;
           });
-          setStreaming(false);
         }
       },
       () => setStreaming(false),
