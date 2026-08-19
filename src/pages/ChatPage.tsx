@@ -76,13 +76,17 @@ export function ChatPage() {
 
         // 'message' events with source_type "agent" carry the final response.
         // The platform sends: {"content":{"content":"full text","source_type":"agent",...},...}
+        // This may arrive before or after stream.complete; either way it
+        // replaces the streamed delta text with the authoritative final text.
         if (event.type === 'message' && payload.content?.source_type === 'agent') {
           const text = payload.content.content ?? '';
           if (text) {
             setMessages((prev) => {
               const next = [...prev];
               const last = next[next.length - 1];
-              if (last && last.role === 'assistant' && last.pending) {
+              // Replace the last assistant message (the deltas) with the
+              // final text, whether it's still pending or already finalized.
+              if (last && last.role === 'assistant') {
                 last.content = text;
                 last.pending = false;
                 return [...next];

@@ -136,6 +136,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const selectTenant = useCallback((t: Tenant) => {
+    setActiveTenant(t);
+    localStorage.setItem(TENANT_KEY, JSON.stringify(t));
+  }, []);
+
   const loadTenants = useCallback(async () => {
     const header = authHeader();
     if (!header) return;
@@ -147,18 +152,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await res.json();
         const list: Tenant[] = data.tenants ?? [];
         setTenants(list);
-        // Auto-select the first tenant if none selected.
-        if (list.length > 0 && !localStorage.getItem(TENANT_KEY)) {
+        // Validate the stored tenant against the fetched list. A stale
+        // tenant from a previous provision will 403 — clear it and pick
+        // the first valid one.
+        const stored = localStorage.getItem(TENANT_KEY);
+        const storedId = stored ? (JSON.parse(stored) as Tenant).id : null;
+        const valid = storedId ? list.find((t) => t.id === storedId) : null;
+        if (valid) {
+          setActiveTenant(valid);
+        } else if (list.length > 0) {
           selectTenant(list[0]);
+        } else {
+          // No valid tenant — clear stale storage.
+          localStorage.removeItem(TENANT_KEY);
+          setActiveTenant(null);
         }
       }
     } catch { /* ignore — tenant list is best-effort */ }
-  }, []);
-
-  const selectTenant = useCallback((t: Tenant) => {
-    setActiveTenant(t);
-    localStorage.setItem(TENANT_KEY, JSON.stringify(t));
-  }, []);
+  }, [selectTenant]);
 
   const signupIfEmpty = useCallback(async (): Promise<string> => {
     const header = authHeader();
