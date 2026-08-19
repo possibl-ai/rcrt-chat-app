@@ -72,7 +72,8 @@ export function openChatStream(
   onEvent: (event: { type: string; data: string }) => void,
   onError?: (err: Event) => void,
 ): () => void {
-  const url = new URL(`${gatewayBase()}/v1/sessions/${encodeURIComponent(sessionId)}/stream`);
+  const path = `${gatewayBase()}/v1/sessions/${encodeURIComponent(sessionId)}/stream`;
+  const url = new URL(path, window.location.origin);
   url.searchParams.set('token', token);
   url.searchParams.set('tenant_id', tenantId);
 
