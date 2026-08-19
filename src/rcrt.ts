@@ -1,21 +1,24 @@
 // RCRT SDK client wrapper for the chat app.
 //
-// Uses @rcrt/sdk's createClient with a staticToken provider (the session JWT
-// we obtained at login). The client talks to the api-gateway directly, but
-// for SSE streaming we use the /api/chat/stream proxy because EventSource
-// cannot set Authorization headers.
+// On the platform, the SPA is served at /<service_id>/ on the same origin as
+// the api-gateway, so /v1/* paths resolve to the gateway directly. For local
+// dev, set VITE_GATEWAY_URL to point at a running api-gateway.
+//
+// The SDK is used for the chat.send() call. SSE streaming uses a direct
+// EventSource connection with the token in the query string (the gateway
+// accepts ?token= for SSE endpoints — same pattern as the user-app).
 
 import { createClient, type RcrtClient } from '@rcrt/sdk';
 
 let clientInstance: RcrtClient | null = null;
 
 export function gatewayBase(): string {
+  // Empty string = same-origin (the platform ingress serves both the SPA
+  // at /<service_id>/ and the gateway at /v1/* on the same host).
   return import.meta.env.VITE_GATEWAY_URL ?? '';
 }
 
 export function getRcrtClient(token: string, tenantId?: string): RcrtClient {
-  // Create a fresh client each time the token or tenant changes — the SDK
-  // caches the token provider, so a stale one would keep sending an old token.
   clientInstance = createClient({
     baseURL: gatewayBase(),
     tokenProvider: async () => token,
@@ -32,7 +35,7 @@ export interface ChatMessage {
 }
 
 /**
- * Send a chat message via the proxied /api/chat endpoint.
+ * Send a chat message via POST /v1/chat (directly to the gateway, same origin).
  * Returns the user message id + session id (the reply comes via SSE).
  */
 export async function sendChat(
@@ -41,7 +44,7 @@ export async function sendChat(
   token: string,
   tenantId: string,
 ): Promise<{ id: string; session_id: string }> {
-  const res = await fetch(`${gatewayBase()}/api/chat`, {
+  const res = await fetch(`${gatewayBase()}/v1/chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -58,9 +61,9 @@ export async function sendChat(
 }
 
 /**
- * Open an SSE stream for a chat session via the /api/chat/stream proxy.
- * The proxy injects the Authorization + X-Tenant-ID headers (EventSource can't).
- * Returns a function to close the connection.
+ * Open an SSE stream for a chat session directly to the gateway.
+ * EventSource cannot set Authorization headers, so the token is passed
+ * as a query parameter (same pattern as the platform's user-app).
  */
 export function openChatStream(
   sessionId: string,
@@ -69,8 +72,7 @@ export function openChatStream(
   onEvent: (event: { type: string; data: string }) => void,
   onError?: (err: Event) => void,
 ): () => void {
-  const url = new URL(`${gatewayBase()}/api/chat/stream`);
-  url.searchParams.set('session_id', sessionId);
+  const url = new URL(`${gatewayBase()}/v1/sessions/${encodeURIComponent(sessionId)}/stream`);
   url.searchParams.set('token', token);
   url.searchParams.set('tenant_id', tenantId);
 

@@ -99,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`${gatewayBase()}/api/env-config`);
+        const res = await fetch(`${gatewayBase()}/v1/env-config`);
         if (res.ok) {
           const cfg: EnvConfig = await res.json();
           setOauthProviders(cfg.auth?.providers ?? []);
@@ -134,7 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const header = authHeader();
     if (!header) return;
     try {
-      const res = await fetch(`${gatewayBase()}/api/auth/tenants`, {
+      const res = await fetch(`${gatewayBase()}/v1/auth/tenants`, {
         headers: { Authorization: header },
       });
       if (res.ok) {
@@ -158,7 +158,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const header = authHeader();
     if (!header) return 'Not authenticated.';
     try {
-      const res = await fetch(`${gatewayBase()}/api/auth/signup`, {
+      const res = await fetch(`${gatewayBase()}/v1/auth/signup`, {
         method: 'POST',
         headers: { Authorization: header, 'Content-Type': 'application/json' },
         body: '{}',
