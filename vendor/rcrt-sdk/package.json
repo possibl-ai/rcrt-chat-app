@@ -1,0 +1,20 @@
+{
+  "name": "@rcrt/sdk",
+  "version": "0.1.1",
+  "description": "RCRT Consumer SDK — vendored local copy (TypeScript).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/types/index.js"
+    }
+  },
+  "files": ["dist"],
+  "engines": { "node": ">=18" }
+}
